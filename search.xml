@@ -1,8 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>数据仓库ETL流程设计与实现</title>
+    <url>/2025/02/10/data-warehouse-etl/</url>
+    <content><![CDATA[<div class="note default">
+            <h3 id="文章导航"><a href="#文章导航" class="headerlink" title="文章导航"></a>文章导航</h3><ul><li><a href="/">返回首页</a></li><li><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">查看更多技术文章</a></li></ul><h3 id="相关文章"><a href="#相关文章" class="headerlink" title="相关文章"></a>相关文章</h3><ul><li><a href="/2025/02/09/collaborative-filtering/">协同过滤在汽车改装推荐中的应用</a></li></ul>
+          </div>
+
+<div class="note info">
+            <p>本文详细介绍数据仓库ETL流程的设计与实现，包括数据抽取、转换、加载的最佳实践。</p>
+          </div>
+
+<h2 id="架构设计"><a href="#架构设计" class="headerlink" title="架构设计"></a>架构设计</h2><div class="note primary">
+            <p>整体采用分层架构：</p><ol><li>ODS层：原始数据层</li><li>DWD层：明细数据层</li><li>DWS层：服务数据层</li><li>ADS层：应用数据层</li></ol>
+          </div>
+
+<h2 id="ETL流程实现"><a href="#ETL流程实现" class="headerlink" title="ETL流程实现"></a>ETL流程实现</h2><h3 id="数据抽取"><a href="#数据抽取" class="headerlink" title="数据抽取"></a>数据抽取</h3><figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">extract_data</span>(<span class="params">source_config</span>):</span><br><span class="line">    <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">    数据抽取模块</span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        <span class="comment"># 建立数据源连接</span></span><br><span class="line">        conn = create_connection(source_config)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 增量抽取逻辑</span></span><br><span class="line">        last_etl_time = get_last_etl_time()</span><br><span class="line">        sql = <span class="string">f&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">            SELECT * FROM source_table </span></span><br><span class="line"><span class="string">            WHERE update_time &gt; &#x27;<span class="subst">&#123;last_etl_time&#125;</span>&#x27;</span></span><br><span class="line"><span class="string">        &quot;&quot;&quot;</span></span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 执行抽取</span></span><br><span class="line">        df = pd.read_sql(sql, conn)</span><br><span class="line">        <span class="keyword">return</span> df</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">        logging.error(<span class="string">f&quot;数据抽取失败: <span class="subst">&#123;<span class="built_in">str</span>(e)&#125;</span>&quot;</span>)</span><br><span class="line">        <span class="keyword">raise</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="数据转换"><a href="#数据转换" class="headerlink" title="数据转换"></a>数据转换</h3><figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">transform_data</span>(<span class="params">df</span>):</span><br><span class="line">    <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">    数据清洗转换</span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line">    <span class="comment"># 数据类型转换</span></span><br><span class="line">    df[<span class="string">&#x27;create_time&#x27;</span>] = pd.to_datetime(df[<span class="string">&#x27;create_time&#x27;</span>])</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 空值处理</span></span><br><span class="line">    df[<span class="string">&#x27;category&#x27;</span>] = df[<span class="string">&#x27;category&#x27;</span>].fillna(<span class="string">&#x27;未分类&#x27;</span>)</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 业务规则转换</span></span><br><span class="line">    df[<span class="string">&#x27;status&#x27;</span>] = df[<span class="string">&#x27;status&#x27;</span>].<span class="built_in">map</span>(&#123;</span><br><span class="line">        <span class="number">0</span>: <span class="string">&#x27;待处理&#x27;</span>,</span><br><span class="line">        <span class="number">1</span>: <span class="string">&#x27;处理中&#x27;</span>,</span><br><span class="line">        <span class="number">2</span>: <span class="string">&#x27;已完成&#x27;</span></span><br><span class="line">    &#125;)</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">return</span> df</span><br></pre></td></tr></table></figure>
+
+<h3 id="数据加载"><a href="#数据加载" class="headerlink" title="数据加载"></a>数据加载</h3><figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">load_data</span>(<span class="params">df, target_config</span>):</span><br><span class="line">    <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">    数据加载到目标表</span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        <span class="comment"># 建立目标库连接</span></span><br><span class="line">        engine = create_engine(target_config)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 分批写入</span></span><br><span class="line">        df.to_sql(</span><br><span class="line">            <span class="string">&#x27;target_table&#x27;</span>,</span><br><span class="line">            engine,</span><br><span class="line">            if_exists=<span class="string">&#x27;append&#x27;</span>,</span><br><span class="line">            index=<span class="literal">False</span>,</span><br><span class="line">            chunksize=<span class="number">1000</span></span><br><span class="line">        )</span><br><span class="line">        </span><br><span class="line">    <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">        logging.error(<span class="string">f&quot;数据加载失败: <span class="subst">&#123;<span class="built_in">str</span>(e)&#125;</span>&quot;</span>)</span><br><span class="line">        <span class="keyword">raise</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="调度管理"><a href="#调度管理" class="headerlink" title="调度管理"></a>调度管理</h2><p>使用Airflow进行任务调度：</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">from</span> airflow <span class="keyword">import</span> DAG</span><br><span class="line"><span class="keyword">from</span> airflow.operators.python_operator <span class="keyword">import</span> PythonOperator</span><br><span class="line"></span><br><span class="line">dag = DAG(</span><br><span class="line">    <span class="string">&#x27;etl_pipeline&#x27;</span>,</span><br><span class="line">    schedule_interval=<span class="string">&#x27;0 2 * * *&#x27;</span>,  <span class="comment"># 每天凌晨2点执行</span></span><br><span class="line">    start_date=datetime(<span class="number">2024</span>, <span class="number">1</span>, <span class="number">1</span>)</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">extract_task = PythonOperator(</span><br><span class="line">    task_id=<span class="string">&#x27;extract_data&#x27;</span>,</span><br><span class="line">    python_callable=extract_data,</span><br><span class="line">    dag=dag</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">transform_task = PythonOperator(</span><br><span class="line">    task_id=<span class="string">&#x27;transform_data&#x27;</span>,</span><br><span class="line">    python_callable=transform_data,</span><br><span class="line">    dag=dag</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">load_task = PythonOperator(</span><br><span class="line">    task_id=<span class="string">&#x27;load_data&#x27;</span>,</span><br><span class="line">    python_callable=load_data,</span><br><span class="line">    dag=dag</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">extract_task &gt;&gt; transform_task &gt;&gt; load_task</span><br></pre></td></tr></table></figure>
+
+<h2 id="监控告警"><a href="#监控告警" class="headerlink" title="监控告警"></a>监控告警</h2><p>实现了完整的监控告警机制：</p>
+<ol>
+<li><p>数据质量监控</p>
+<ul>
+<li>空值检查</li>
+<li>重复值检查</li>
+<li>数据一致性校验</li>
+</ul>
+</li>
+<li><p>任务执行监控</p>
+<ul>
+<li>运行状态</li>
+<li>执行时长</li>
+<li>错误日志</li>
+</ul>
+</li>
+<li><p>告警通知</p>
+<ul>
+<li>邮件通知</li>
+<li>企业微信通知</li>
+<li>短信通知</li>
+</ul>
+</li>
+</ol>
+<h2 id="性能优化"><a href="#性能优化" class="headerlink" title="性能优化"></a>性能优化</h2><p>主要从以下几个方面进行了优化：</p>
+<ol>
+<li>分批处理</li>
+<li>并行计算</li>
+<li>索引优化</li>
+<li>资源控制</li>
+</ol>
+<h2 id="实践总结"><a href="#实践总结" class="headerlink" title="实践总结"></a>实践总结</h2><ol>
+<li>保证数据质量是首要任务</li>
+<li>合理的分层设计很重要</li>
+<li>监控告警要及时准确</li>
+<li>持续优化性能指标</li>
+</ol>
+]]></content>
+      <categories>
+        <category>技术分享</category>
+      </categories>
+      <tags>
+        <tag>ETL</tag>
+        <tag>数据仓库</tag>
+        <tag>Python</tag>
+        <tag>Airflow</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>关于我</title>
-    <url>/2024/03/20/about/</url>
+    <url>/2025/02/10/about/</url>
     <content><![CDATA[<h2 id="个人简介"><a href="#个人简介" class="headerlink" title="个人简介"></a>个人简介</h2><p>作为一名充满激情的后端开发工程师，我专注于构建高性能、可扩展的企业级应用系统。在大数据处理和分布式系统开发方面有丰富的实践经验，擅长运用Java生态系统解决复杂的技术难题。</p>
 <p>我热衷于编写清晰、高效的代码，注重系统的可维护性和扩展性。同时，我也是开源社区的积极参与者，乐于分享技术经验和解决方案。作为一个终身学习者，我持续关注技术发展趋势，并将新技术应用到实际项目中。</p>
 <h2 id="项目经验"><a href="#项目经验" class="headerlink" title="项目经验"></a>项目经验</h2><h3 id="汽车改装推荐系统"><a href="#汽车改装推荐系统" class="headerlink" title="汽车改装推荐系统"></a>汽车改装推荐系统</h3><p><strong>GitHub地址</strong>: <a href="https://github.com/oliver037/car-modification-recommend">https://github.com/oliver037/car-modification-recommend</a></p>
@@ -83,7 +155,7 @@
 </ul>
 <h2 id="联系方式"><a href="#联系方式" class="headerlink" title="联系方式"></a>联系方式</h2><ul>
 <li>GitHub: <a href="https://github.com/oliver037">oliver037</a></li>
-<li>Email: <a href="mailto:&#49;&#x34;&#x31;&#57;&#50;&#51;&#x35;&#56;&#x39;&#x37;&#x40;&#113;&#x71;&#46;&#99;&#111;&#109;">&#49;&#x34;&#x31;&#57;&#50;&#51;&#x35;&#56;&#x39;&#x37;&#x40;&#113;&#x71;&#46;&#99;&#111;&#109;</a></li>
+<li>Email: <a href="mailto:&#49;&#x34;&#x31;&#57;&#x32;&#51;&#x35;&#56;&#57;&#55;&#64;&#x71;&#113;&#x2e;&#x63;&#x6f;&#x6d;">&#49;&#x34;&#x31;&#57;&#x32;&#51;&#x35;&#56;&#57;&#55;&#64;&#x71;&#113;&#x2e;&#x63;&#x6f;&#x6d;</a></li>
 <li>电话: 15811534195</li>
 </ul>
 <h2 id="个人座右铭"><a href="#个人座右铭" class="headerlink" title="个人座右铭"></a>个人座右铭</h2><p>“脚踏实地做事，顶天立地做人”</p>
@@ -140,9 +212,9 @@
         <category>技术分享</category>
       </categories>
       <tags>
+        <tag>Python</tag>
         <tag>推荐系统</tag>
         <tag>机器学习</tag>
-        <tag>Python</tag>
         <tag>协同过滤</tag>
       </tags>
   </entry>
@@ -205,7 +277,7 @@
             <ol><li>深入研究分布式系统</li><li>提升架构设计能力</li><li>探索云原生技术</li><li>贡献开源项目</li></ol>
           </div>
 
-<h2 id="联系方式"><a href="#联系方式" class="headerlink" title=" 联系方式"></a><i class="fas fa-address-card"></i> 联系方式</h2><div class="tabs" id="contact"><ul class="nav-tabs"><li class="tab active"><a href="#contact-1">邮箱</a></li><li class="tab"><a href="#contact-2">电话</a></li><li class="tab"><a href="#contact-3">GitHub</a></li></ul><div class="tab-content"><div class="tab-pane active" id="contact-1"><p><i class="fas fa-envelope"></i> <a href="mailto:&#x31;&#52;&#49;&#57;&#x32;&#51;&#53;&#56;&#x39;&#55;&#64;&#x71;&#x71;&#x2e;&#x63;&#x6f;&#x6d;">&#x31;&#52;&#49;&#57;&#x32;&#51;&#53;&#56;&#x39;&#55;&#64;&#x71;&#x71;&#x2e;&#x63;&#x6f;&#x6d;</a></p></div><div class="tab-pane" id="contact-2"><p><i class="fas fa-phone"></i> 15811534195</p></div><div class="tab-pane" id="contact-3"><p><i class="fab fa-github"></i> <a href="https://github.com/oliver037">github.com&#x2F;oliver037</a></p></div></div></div>
+<h2 id="联系方式"><a href="#联系方式" class="headerlink" title=" 联系方式"></a><i class="fas fa-address-card"></i> 联系方式</h2><div class="tabs" id="contact"><ul class="nav-tabs"><li class="tab active"><a href="#contact-1">邮箱</a></li><li class="tab"><a href="#contact-2">电话</a></li><li class="tab"><a href="#contact-3">GitHub</a></li></ul><div class="tab-content"><div class="tab-pane active" id="contact-1"><p><i class="fas fa-envelope"></i> <a href="mailto:&#x31;&#x34;&#x31;&#x39;&#x32;&#51;&#x35;&#56;&#x39;&#55;&#x40;&#113;&#113;&#46;&#99;&#111;&#x6d;">&#x31;&#x34;&#x31;&#x39;&#x32;&#51;&#x35;&#56;&#x39;&#55;&#x40;&#113;&#113;&#46;&#99;&#111;&#x6d;</a></p></div><div class="tab-pane" id="contact-2"><p><i class="fas fa-phone"></i> 15811534195</p></div><div class="tab-pane" id="contact-3"><p><i class="fab fa-github"></i> <a href="https://github.com/oliver037">github.com&#x2F;oliver037</a></p></div></div></div>
 ]]></content>
       <categories>
         <category>个人简介</category>
@@ -214,78 +286,6 @@
         <tag>后端开发</tag>
         <tag>Java</tag>
         <tag>Spring Boot</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>数据仓库ETL流程设计与实现</title>
-    <url>/2025/02/10/data-warehouse-etl/</url>
-    <content><![CDATA[<div class="note default">
-            <h3 id="文章导航"><a href="#文章导航" class="headerlink" title="文章导航"></a>文章导航</h3><ul><li><a href="/">返回首页</a></li><li><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">查看更多技术文章</a></li></ul><h3 id="相关文章"><a href="#相关文章" class="headerlink" title="相关文章"></a>相关文章</h3><ul><li><a href="/2025/02/09/collaborative-filtering/">协同过滤在汽车改装推荐中的应用</a></li></ul>
-          </div>
-
-<div class="note info">
-            <p>本文详细介绍数据仓库ETL流程的设计与实现，包括数据抽取、转换、加载的最佳实践。</p>
-          </div>
-
-<h2 id="架构设计"><a href="#架构设计" class="headerlink" title="架构设计"></a>架构设计</h2><div class="note primary">
-            <p>整体采用分层架构：</p><ol><li>ODS层：原始数据层</li><li>DWD层：明细数据层</li><li>DWS层：服务数据层</li><li>ADS层：应用数据层</li></ol>
-          </div>
-
-<h2 id="ETL流程实现"><a href="#ETL流程实现" class="headerlink" title="ETL流程实现"></a>ETL流程实现</h2><h3 id="数据抽取"><a href="#数据抽取" class="headerlink" title="数据抽取"></a>数据抽取</h3><figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">extract_data</span>(<span class="params">source_config</span>):</span><br><span class="line">    <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">    数据抽取模块</span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        <span class="comment"># 建立数据源连接</span></span><br><span class="line">        conn = create_connection(source_config)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 增量抽取逻辑</span></span><br><span class="line">        last_etl_time = get_last_etl_time()</span><br><span class="line">        sql = <span class="string">f&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">            SELECT * FROM source_table </span></span><br><span class="line"><span class="string">            WHERE update_time &gt; &#x27;<span class="subst">&#123;last_etl_time&#125;</span>&#x27;</span></span><br><span class="line"><span class="string">        &quot;&quot;&quot;</span></span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 执行抽取</span></span><br><span class="line">        df = pd.read_sql(sql, conn)</span><br><span class="line">        <span class="keyword">return</span> df</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">        logging.error(<span class="string">f&quot;数据抽取失败: <span class="subst">&#123;<span class="built_in">str</span>(e)&#125;</span>&quot;</span>)</span><br><span class="line">        <span class="keyword">raise</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="数据转换"><a href="#数据转换" class="headerlink" title="数据转换"></a>数据转换</h3><figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">transform_data</span>(<span class="params">df</span>):</span><br><span class="line">    <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">    数据清洗转换</span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line">    <span class="comment"># 数据类型转换</span></span><br><span class="line">    df[<span class="string">&#x27;create_time&#x27;</span>] = pd.to_datetime(df[<span class="string">&#x27;create_time&#x27;</span>])</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 空值处理</span></span><br><span class="line">    df[<span class="string">&#x27;category&#x27;</span>] = df[<span class="string">&#x27;category&#x27;</span>].fillna(<span class="string">&#x27;未分类&#x27;</span>)</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 业务规则转换</span></span><br><span class="line">    df[<span class="string">&#x27;status&#x27;</span>] = df[<span class="string">&#x27;status&#x27;</span>].<span class="built_in">map</span>(&#123;</span><br><span class="line">        <span class="number">0</span>: <span class="string">&#x27;待处理&#x27;</span>,</span><br><span class="line">        <span class="number">1</span>: <span class="string">&#x27;处理中&#x27;</span>,</span><br><span class="line">        <span class="number">2</span>: <span class="string">&#x27;已完成&#x27;</span></span><br><span class="line">    &#125;)</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">return</span> df</span><br></pre></td></tr></table></figure>
-
-<h3 id="数据加载"><a href="#数据加载" class="headerlink" title="数据加载"></a>数据加载</h3><figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">load_data</span>(<span class="params">df, target_config</span>):</span><br><span class="line">    <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">    数据加载到目标表</span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        <span class="comment"># 建立目标库连接</span></span><br><span class="line">        engine = create_engine(target_config)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 分批写入</span></span><br><span class="line">        df.to_sql(</span><br><span class="line">            <span class="string">&#x27;target_table&#x27;</span>,</span><br><span class="line">            engine,</span><br><span class="line">            if_exists=<span class="string">&#x27;append&#x27;</span>,</span><br><span class="line">            index=<span class="literal">False</span>,</span><br><span class="line">            chunksize=<span class="number">1000</span></span><br><span class="line">        )</span><br><span class="line">        </span><br><span class="line">    <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">        logging.error(<span class="string">f&quot;数据加载失败: <span class="subst">&#123;<span class="built_in">str</span>(e)&#125;</span>&quot;</span>)</span><br><span class="line">        <span class="keyword">raise</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="调度管理"><a href="#调度管理" class="headerlink" title="调度管理"></a>调度管理</h2><p>使用Airflow进行任务调度：</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">from</span> airflow <span class="keyword">import</span> DAG</span><br><span class="line"><span class="keyword">from</span> airflow.operators.python_operator <span class="keyword">import</span> PythonOperator</span><br><span class="line"></span><br><span class="line">dag = DAG(</span><br><span class="line">    <span class="string">&#x27;etl_pipeline&#x27;</span>,</span><br><span class="line">    schedule_interval=<span class="string">&#x27;0 2 * * *&#x27;</span>,  <span class="comment"># 每天凌晨2点执行</span></span><br><span class="line">    start_date=datetime(<span class="number">2024</span>, <span class="number">1</span>, <span class="number">1</span>)</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">extract_task = PythonOperator(</span><br><span class="line">    task_id=<span class="string">&#x27;extract_data&#x27;</span>,</span><br><span class="line">    python_callable=extract_data,</span><br><span class="line">    dag=dag</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">transform_task = PythonOperator(</span><br><span class="line">    task_id=<span class="string">&#x27;transform_data&#x27;</span>,</span><br><span class="line">    python_callable=transform_data,</span><br><span class="line">    dag=dag</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">load_task = PythonOperator(</span><br><span class="line">    task_id=<span class="string">&#x27;load_data&#x27;</span>,</span><br><span class="line">    python_callable=load_data,</span><br><span class="line">    dag=dag</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">extract_task &gt;&gt; transform_task &gt;&gt; load_task</span><br></pre></td></tr></table></figure>
-
-<h2 id="监控告警"><a href="#监控告警" class="headerlink" title="监控告警"></a>监控告警</h2><p>实现了完整的监控告警机制：</p>
-<ol>
-<li><p>数据质量监控</p>
-<ul>
-<li>空值检查</li>
-<li>重复值检查</li>
-<li>数据一致性校验</li>
-</ul>
-</li>
-<li><p>任务执行监控</p>
-<ul>
-<li>运行状态</li>
-<li>执行时长</li>
-<li>错误日志</li>
-</ul>
-</li>
-<li><p>告警通知</p>
-<ul>
-<li>邮件通知</li>
-<li>企业微信通知</li>
-<li>短信通知</li>
-</ul>
-</li>
-</ol>
-<h2 id="性能优化"><a href="#性能优化" class="headerlink" title="性能优化"></a>性能优化</h2><p>主要从以下几个方面进行了优化：</p>
-<ol>
-<li>分批处理</li>
-<li>并行计算</li>
-<li>索引优化</li>
-<li>资源控制</li>
-</ol>
-<h2 id="实践总结"><a href="#实践总结" class="headerlink" title="实践总结"></a>实践总结</h2><ol>
-<li>保证数据质量是首要任务</li>
-<li>合理的分层设计很重要</li>
-<li>监控告警要及时准确</li>
-<li>持续优化性能指标</li>
-</ol>
-]]></content>
-      <categories>
-        <category>技术分享</category>
-      </categories>
-      <tags>
-        <tag>Python</tag>
-        <tag>ETL</tag>
-        <tag>数据仓库</tag>
-        <tag>Airflow</tag>
       </tags>
   </entry>
 </search>
